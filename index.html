@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reserva Universitária Maurilândia (Cópia Local de Teste)</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img class="secretaria-logo" src="assets/logo-secretaria.jpg" alt="Secretaria Municipal de Educação – Prefeitura de Maurilândia">
+      <div class="brand-title">
+        <div class="brand-icon">🚌</div>
+        <div>
+          <strong>Reserva Universitária (Ambiente Local de Testes)</strong>
+          <span>Maurilândia – GO</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="painel-teste-automacao" class="card" style="border: 2px solid #2563eb; background: #eff6ff; margin-bottom: 18px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <strong style="color: #1d4ed8; font-size: 1.05rem;">🧪 Painel de Testes da Automação (Recarregando a cada 2s)</strong>
+          <div id="status-painel-teste" style="font-size: 0.92rem; color: #1e3a8a; margin-top: 4px;">
+            Conectando ao servidor local de testes...
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" id="btn-proximo-minuto" style="background: #2563eb; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+            ⏱️ Mudar abertura p/ Hora Mais Próxima (+40s)
+          </button>
+          <button type="button" id="btn-abrir-agora" style="background: #059669; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+            🔓 Liberar Agora
+          </button>
+          <button type="button" id="btn-limpar-teste" style="background: #dc2626; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+            🧹 Limpar Reserva de Teste
+          </button>
+        </div>
+      </div>
+      <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #bfdbfe; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 0.9rem;">
+        <label style="margin: 0; display: flex; align-items: center; gap: 6px;">
+          <strong>🚌 Ônibus Padrão do Bot:</strong>
+          <select id="select-onibus-padrao" style="padding: 4px 8px; border-radius: 6px;">
+            <option value="1">1 - 0542 (Dheimes)</option>
+            <option value="2" selected>2 - 0519 (Adalberto)</option>
+            <option value="3">3 - 0507 (Edson)</option>
+          </select>
+        </label>
+        <label style="margin: 0; display: flex; align-items: center; gap: 6px;">
+          <strong>📅 Ônibus de Sexta-feira:</strong>
+          <select id="select-onibus-sexta" style="padding: 4px 8px; border-radius: 6px;">
+            <option value="1">1 - 0542 (Dheimes)</option>
+            <option value="2" selected>2 - 0519 (Adalberto)</option>
+            <option value="3">3 - 0507 (Edson)</option>
+          </select>
+        </label>
+        <span id="resumo-reserva-bot" style="color: #047857; font-weight: 600;"></span>
+      </div>
+    </section>
+
+    <section class="hero">
+      <span class="eyebrow">TRANSPORTE UNIVERSITÁRIO</span>
+      <h1>Reserve sua viagem</h1>
+      <p>Escolha o dia, o ônibus ou a VAN de excedentes.</p>
+    </section>
+
+    <section class="card">
+      <div class="step">
+        <div class="step-number">1</div>
+        <div>
+          <h2>Escolha a data</h2>
+          <p>Faça uma reserva para um único dia.</p>
+        </div>
+      </div>
+      <div class="date-picker-row">
+        <input id="date" type="text" inputmode="numeric" autocomplete="off" placeholder="DD/MM/AAAA" maxlength="10" aria-label="Data da viagem" />
+        <button type="button" id="open-calendar" class="calendar-button" aria-label="Abrir calendário" title="Abrir calendário">📅</button>
+        <input id="date-calendar" class="calendar-native" type="date" tabindex="-1" aria-hidden="true" />
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="step">
+        <div class="step-number">2</div>
+        <div>
+          <h2>Escolha o ônibus</h2>
+          <p>Escolha o ônibus que atende à sua rota. Se as cotas da UniRV dos três ônibus estiverem esgotadas, a VAN de excedentes será liberada automaticamente.</p>
+          <p><strong>⚠️ Atenção:</strong> os alunos da UNIRV – Fazenda podem escolher qualquer um dos três ônibus disponíveis.</p>
+        </div>
+      </div>
+      <div id="bus-list" class="bus-list"></div>
+    </section>
+
+    <section id="seat-section" class="card hidden">
+      <div class="step">
+        <div class="step-number">3</div>
+        <div>
+          <h2>Escolha sua poltrona ou vaga</h2>
+          <p>Ônibus: verde = disponível · cinza = ocupada. VAN: escolha uma vaga de V1 a V17.</p>
+        </div>
+      </div>
+      <div id="seat-map" class="seat-map"></div>
+      <div id="selected-seat" class="selected-seat">Nenhuma poltrona selecionada.</div>
+    </section>
+
+    <section id="student-section" class="card hidden">
+      <div class="step">
+        <div class="step-number">4</div>
+        <div>
+          <h2>Seus dados</h2>
+          <p>Informe os dados para confirmar a reserva.</p>
+        </div>
+      </div>
+
+      <label>Nome completo
+        <div class="name-autocomplete-wrap">
+          <input id="name" type="text" placeholder="Digite seu primeiro nome" autocomplete="off" aria-autocomplete="list" aria-controls="universitarios-sugestoes" aria-expanded="false" />
+          <div id="universitarios-sugestoes" class="name-suggestions" role="listbox" aria-label="Universitários cadastrados"></div>
+        </div>
+        <small class="name-help">Digite as primeiras letras e selecione seu nome na lista.</small>
+      </label>
+      <label>Curso
+        <input id="course" type="text" placeholder="Ex.: Administração" />
+      </label>
+      <label>Instituição
+        <select id="institution">
+          <option value="">Selecione sua instituição</option>
+          <option value="UNIRV">UNIRV</option>
+          <option value="UNIRV CENTRO">UNIRV CENTRO</option>
+          <option value="UNIBRAS">UNIBRAS</option>
+          <option value="FAR">FAR</option>
+          <option value="TECMAIS">TECMAIS</option>
+          <option value="SESI/SENAI">SESI/SENAI</option>
+          <option value="UNOPAR">UNOPAR</option>
+          <option value="QUALITY">QUALITY</option>
+          <option value="ÁTOMO">ÁATOMO</option>
+          <option value="UEG - SHEGO">UEG - SHEGO</option>
+          <option value="CETEG - SHEGO">CETEG - SHEGO</option>
+          <option value="UNIASSELVI">UNIASSELVI</option>
+          <option value="UNICESUMAR">UNICESUMAR</option>
+        </select>
+      </label>
+
+      <button type="button" id="confirm" class="primary" disabled>Confirmar reserva</button>
+      <div id="message" class="message"></div>
+    </section>
+  </main>
+
+  <footer>
+    Secretaria Municipal de Educação · Maurilândia – GO (Clone Local de Testes)
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app_v17_7.js"></script>
+  <script>
+    (function () {
+      const statusEl = document.getElementById("status-painel-teste");
+      const resumoBotEl = document.getElementById("resumo-reserva-bot");
+      const btnProximo = document.getElementById("btn-proximo-minuto");
+      const btnAbrir = document.getElementById("btn-abrir-agora");
+      const btnLimpar = document.getElementById("btn-limpar-teste");
+      const selPadrao = document.getElementById("select-onibus-padrao");
+      const selSexta = document.getElementById("select-onibus-sexta");
+
+      window.__atualizarPainelTesteUI = function (cfg) {
+        if (!cfg || !statusEl) return;
+        const estadoBadge = cfg.aberta_agora
+          ? '<span style="background:#059669;color:#fff;padding:2px 8px;border-radius:12px;font-weight:700;">🔓 LISTA ABERTA</span>'
+          : '<span style="background:#d97706;color:#fff;padding:2px 8px;border-radius:12px;font-weight:700;">🔒 AGUARDANDO ABERTURA</span>';
+        statusEl.innerHTML =
+          `⏰ Hora atual: <strong>${cfg.hora_servidor}</strong> &nbsp;|&nbsp; ` +
+          `🎯 Horário de abertura de teste: <strong>${cfg.horario_abertura}</strong> &nbsp;|&nbsp; ${estadoBadge}`;
+
+        if (cfg.config_onibus) {
+          if (selPadrao && document.activeElement !== selPadrao) {
+            selPadrao.value = String(cfg.config_onibus.onibus_padrao || 2);
+          }
+          if (selSexta && document.activeElement !== selSexta) {
+            selSexta.value = String(cfg.config_onibus.onibus_viagem_sexta || 2);
+          }
+        }
+
+        if (resumoBotEl) {
+          const reservas = cfg.reservas_locais || [];
+          if (reservas.length > 0) {
+            const u = reservas[reservas.length - 1];
+            resumoBotEl.innerHTML =
+              `✅ Reserva de teste ativa: <strong>${u.nome}</strong> — Ônibus ${u.onibus}, Poltrona <strong>${u.poltrona}</strong> (Código: <code>${u.codigo_reserva}</code>)`;
+          } else {
+            resumoBotEl.textContent = "Nenhuma reserva de teste gravada ainda.";
+          }
+        }
+      };
+
+      async function enviarAcaoTeste(payload) {
+        try {
+          const r = await fetch("/api/config-teste", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (r.ok) {
+            const dados = await r.json();
+            window.__configTesteLocal = dados;
+            window.__atualizarPainelTesteUI(dados);
+          }
+        } catch (e) {
+          console.error("Erro ao comunicar com servidor de teste:", e);
+        }
+      }
+
+      if (btnProximo) {
+        btnProximo.addEventListener("click", () => enviarAcaoTeste({ acao: "proximo_minuto", segundos: 40, limpar_reservas: true }));
+      }
+      if (btnAbrir) {
+        btnAbrir.addEventListener("click", () => enviarAcaoTeste({ acao: "abrir_agora" }));
+      }
+      if (btnLimpar) {
+        btnLimpar.addEventListener("click", () => enviarAcaoTeste({ acao: "limpar_reservas" }));
+      }
+      if (selPadrao) {
+        selPadrao.addEventListener("change", () => enviarAcaoTeste({ acao: "mudar_onibus", onibus_padrao: Number(selPadrao.value) }));
+      }
+      if (selSexta) {
+        selSexta.addEventListener("change", () => enviarAcaoTeste({ acao: "mudar_onibus", onibus_viagem_sexta: Number(selSexta.value) }));
+      }
+    })();
+  </script>
+</body>
+</html>

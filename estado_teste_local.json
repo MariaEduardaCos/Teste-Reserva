@@ -1,0 +1,17 @@
+{
+  "ativo": true,
+  "horario_abertura": "20:03",
+  "data_alvo": "2026-10-21",
+  "reservas_locais": [
+    {
+      "data_viagem": "2026-10-21",
+      "nome": "Maria Eduarda Costa Toledo",
+      "curso": "Engenharia de Software",
+      "instituicao": "UNIRV",
+      "onibus": 2,
+      "poltrona": 9,
+      "tipo_transporte": "onibus",
+      "codigo_reserva": "MU-14B7F21C"
+    }
+  ]
+}
