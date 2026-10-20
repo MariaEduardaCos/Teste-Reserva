@@ -1,0 +1,11 @@
+{
+  "onibus_padrao": 2,
+  "onibus_viagem_sexta": 2,
+  "onibus_temporario": null,
+  "opcoes_onibus": {
+    "1": "Ônibus 1 (0542 - Motorista padrão: Dheimes)",
+    "2": "Ônibus 2 (0519 - Motorista padrão: Adalberto)",
+    "3": "Ônibus 3 (0507 - Motorista padrão: Edson)"
+  },
+  "instrucoes": "Altere 'onibus_padrao' (1, 2 ou 3) para mudar o ônibus de todos os dias, 'onibus_viagem_sexta' (1, 2 ou 3) para o ônibus da viagem de sexta-feira (reservada na quinta à noite), ou 'onibus_temporario' (1, 2, 3 ou null) para valer apenas na próxima reserva."
+}
