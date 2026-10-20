@@ -184,6 +184,7 @@ def verificar_agenda_automacao(agora=None):
     if dia_semana == 6:
         data_segunda = (agora + timedelta(days=1)).strftime("%Y-%m-%d")
         abertura_domingo = agora.replace(hour=18, minute=0, second=0, microsecond=0)
+        dt_inicio_domingo = agora.replace(hour=17, minute=58, second=0, microsecond=0)
         inicio_automacao = 17 * 60 + 58  # 17:58
 
         if minutos_agora < inicio_automacao:
@@ -192,6 +193,7 @@ def verificar_agenda_automacao(agora=None):
                 "motivo": f"Hoje é Domingo, mas ainda são {agora.strftime('%H:%M')}. A automação de domingo inicia a partir das 17:58h (abertura às 18:00h).",
                 "data_viagem": data_segunda,
                 "horario_abertura": abertura_domingo,
+                "inicio_disparos": dt_inicio_domingo,
                 "dia_nome": nome_hoje,
             }
 
@@ -200,6 +202,7 @@ def verificar_agenda_automacao(agora=None):
             "motivo": "Domingo (a partir das 17:58h) -> Reserva para Segunda-feira (abertura às 18:00h).",
             "data_viagem": data_segunda,
             "horario_abertura": abertura_domingo,
+            "inicio_disparos": dt_inicio_domingo,
             "dia_nome": nome_hoje,
         }
 
@@ -212,12 +215,14 @@ def verificar_agenda_automacao(agora=None):
             "motivo": f"{nome_hoje} antes das 15:00h -> Reserva imediata para hoje ({data_hoje}).",
             "data_viagem": data_hoje,
             "horario_abertura": agora,
+            "inicio_disparos": agora,
             "dia_nome": nome_hoje,
         }
 
     # Entre 15:00h e 21:57h: janela fechada (abre às 22:00h, automação inicia às 21:58h)
     data_amanha = (agora + timedelta(days=1)).strftime("%Y-%m-%d")
     abertura_noite = agora.replace(hour=22, minute=0, second=0, microsecond=0)
+    dt_inicio_noite = agora.replace(hour=21, minute=58, second=0, microsecond=0)
     inicio_noite = 21 * 60 + 58  # 21:58
 
     if minutos_agora < inicio_noite:
@@ -226,6 +231,7 @@ def verificar_agenda_automacao(agora=None):
             "motivo": f"Hoje é {nome_hoje} ({agora.strftime('%H:%M')}). Reservas encerradas das 15h às 22h (automação inicia às 21:58h).",
             "data_viagem": data_amanha,
             "horario_abertura": abertura_noite,
+            "inicio_disparos": dt_inicio_noite,
             "dia_nome": nome_hoje,
         }
 
@@ -234,6 +240,7 @@ def verificar_agenda_automacao(agora=None):
         "motivo": f"{nome_hoje} (a partir das 21:58h) -> Reserva para amanhã ({data_amanha}, abertura às 22:00h).",
         "data_viagem": data_amanha,
         "horario_abertura": abertura_noite,
+        "inicio_disparos": dt_inicio_noite,
         "dia_nome": nome_hoje,
     }
 
@@ -424,12 +431,28 @@ def executar_bot_nova_regra(
     onibus_forcado=None,
     forcar_execucao=False,
     aguardar_abertura=True,
-    duracao_max_tentativas_seg=300,
+    duracao_max_tentativas_seg=480,
 ):
     agora = datetime.now()
     status_agenda = verificar_agenda_automacao(agora)
 
     if not data_alvo:
+        inicio_disparos = status_agenda.get("inicio_disparos")
+        if (
+            not status_agenda["deve_rodar"]
+            and aguardar_abertura
+            and inicio_disparos
+            and 0 < (inicio_disparos - agora).total_seconds() <= 900
+        ):
+            espera_pre = (inicio_disparos - agora).total_seconds()
+            print(
+                f"☁️ [{agora.strftime('%H:%M:%S')}] Máquina virtual iniciada antecipadamente! "
+                f"Aguardando {int(espera_pre)}s até {inicio_disparos.strftime('%H:%M:%S')} para iniciar os disparos..."
+            )
+            time.sleep(espera_pre)
+            agora = datetime.now()
+            status_agenda = verificar_agenda_automacao(agora)
+
         if not status_agenda["deve_rodar"] and not forcar_execucao and not MODO_TESTE_LOCAL:
             print("=" * 70)
             print(f"🛑 AUTOMAÇÃO PAUSADA / FORA DE JANELA ({agora.strftime('%d/%m/%Y %H:%M:%S')})")
