@@ -1,7 +1,6 @@
 name: Reserva Universitária Automática
 
 on:
-  # Permite disparar manualmente pelo GitHub escolhendo o ônibus se desejar
   workflow_dispatch:
     inputs:
       onibus:
@@ -14,14 +13,22 @@ on:
         default: false
 
   schedule:
-    # DOMINGO: Inicia a máquina na nuvem às 17:54h BRT (20:54 UTC) para absorver fila do GitHub,
-    # aguarda até 17:58:00 BRT e recarrega a cada 2s até abrir às 18:00h (reserva p/ Segunda-feira).
-    - cron: "54 20 * * 0"
+    # DOMINGO: Disparos antecipados para vencer a fila do GitHub.
+    # 17:35h BRT (20:35 UTC) e 17:50h BRT (20:50 UTC).
+    # A máquina inicia na nuvem, aguarda calmamente até 17:58:00 BRT e dispara a cada 2s até abrir às 18:00h!
+    - cron: "35 20 * * 0"
+    - cron: "50 20 * * 0"
 
-    # SEGUNDA A QUINTA-FEIRA: Inicia a máquina às 21:54h BRT (00:54 UTC de Terça a Sexta),
-    # aguarda até 21:58:00 BRT e recarrega a cada 2s até abrir às 22:00h (reserva p/ o dia seguinte).
-    # OBS: Sexta-feira à noite NÃO roda pois não há aula no sábado!
-    - cron: "54 0 * * 2-5"
+    # SEGUNDA A QUINTA-FEIRA: Disparos antecipados para vencer a fila do GitHub.
+    # 21:35h BRT (00:35 UTC de Terça a Sexta) e 21:50h BRT (00:50 UTC de Terça a Sexta).
+    # A máquina inicia na nuvem, aguarda calmamente até 21:58:00 BRT e dispara a cada 2s até abrir às 22:00h!
+    # OBS: Sexta-feira à noite NÃO roda (sem aula no sábado).
+    - cron: "35 0 * * 2-5"
+    - cron: "50 0 * * 2-5"
+
+concurrency:
+  group: reserva-unirv
+  cancel-in-progress: false
 
 jobs:
   reservar:

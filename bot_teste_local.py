@@ -442,7 +442,7 @@ def executar_bot_nova_regra(
             not status_agenda["deve_rodar"]
             and aguardar_abertura
             and inicio_disparos
-            and 0 < (inicio_disparos - agora).total_seconds() <= 900
+            and 0 < (inicio_disparos - agora).total_seconds() <= 2700
         ):
             espera_pre = (inicio_disparos - agora).total_seconds()
             print(
