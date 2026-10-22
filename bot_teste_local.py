@@ -437,28 +437,6 @@ def executar_bot_nova_regra(
     status_agenda = verificar_agenda_automacao(agora)
 
     if not data_alvo:
-        inicio_disparos = status_agenda.get("inicio_disparos")
-        if (
-            not status_agenda["deve_rodar"]
-            and aguardar_abertura
-            and inicio_disparos
-            and 0 < (inicio_disparos - agora).total_seconds() <= 2700
-        ):
-            espera_pre = (inicio_disparos - agora).total_seconds()
-            print(
-                f"☁️ [{agora.strftime('%H:%M:%S')}] Máquina virtual iniciada antecipadamente! "
-                f"Aguardando {int(espera_pre)}s até {inicio_disparos.strftime('%H:%M:%S')} para iniciar os disparos..."
-            )
-            time.sleep(espera_pre)
-            agora = datetime.now()
-            status_agenda = verificar_agenda_automacao(agora)
-
-        if not status_agenda["deve_rodar"] and not forcar_execucao and not MODO_TESTE_LOCAL:
-            print("=" * 70)
-            print(f"🛑 AUTOMAÇÃO PAUSADA / FORA DE JANELA ({agora.strftime('%d/%m/%Y %H:%M:%S')})")
-            print(f"📌 Motivo: {status_agenda['motivo']}")
-            print("=" * 70)
-            return False
         data_alvo = status_agenda["data_viagem"] or agora.strftime("%Y-%m-%d")
 
     onibus_selecionado, origem_onibus = obter_onibus_para_data(data_alvo, onibus_forcado=onibus_forcado)
@@ -473,6 +451,41 @@ def executar_bot_nova_regra(
     print(f"🚌 Ônibus Selecionado: {descricao_onibus(onibus_selecionado)} [{origem_onibus}]")
     print(f"🌐 Servidor Alvo: {SUPABASE_URL}")
     print("=" * 70)
+
+    # Se iniciado com antecedência (ex: 20:50h para abertura às 22h, ou 17:00h no domingo para 18h)
+    inicio_disparos = status_agenda.get("inicio_disparos")
+    if (
+        not status_agenda["deve_rodar"]
+        and aguardar_abertura
+        and inicio_disparos
+        and 0 < (inicio_disparos - agora).total_seconds() <= 14400
+    ):
+        segundos_espera = int((inicio_disparos - agora).total_seconds())
+        minutos_espera = segundos_espera // 60
+        print(
+            f"⏳ [{agora.strftime('%H:%M:%S')}] Automação iniciada antecipadamente!\n"
+            f"   Ônibus confirmado: {descricao_onibus(onibus_selecionado)}.\n"
+            f"   Aguardando {minutos_espera} min e {segundos_espera % 60}s até {inicio_disparos.strftime('%H:%M:%S')} para iniciar os disparos a cada 2s..."
+        )
+        while True:
+            falta = (inicio_disparos - datetime.now()).total_seconds()
+            if falta <= 0:
+                break
+            passo = min(falta, 60.0 if falta > 120 else 5.0)
+            time.sleep(passo)
+            falta_agora = int((inicio_disparos - datetime.now()).total_seconds())
+            if falta_agora > 0 and falta_agora % 300 < 5:
+                print(f"   ⏰ [{datetime.now().strftime('%H:%M:%S')}] Restam {falta_agora // 60} minutos para os disparos...")
+
+        agora = datetime.now()
+        status_agenda = verificar_agenda_automacao(agora)
+
+    if not status_agenda["deve_rodar"] and not forcar_execucao and not MODO_TESTE_LOCAL:
+        print("=" * 70)
+        print(f"🛑 AUTOMAÇÃO PAUSADA / FORA DE JANELA ({agora.strftime('%d/%m/%Y %H:%M:%S')})")
+        print(f"📌 Motivo: {status_agenda['motivo']}")
+        print("=" * 70)
+        return False
 
     # 1. Verifica se já existe reserva ativa para a data_alvo
     reserva_ativa = consultar_reserva_existente(data_alvo)
