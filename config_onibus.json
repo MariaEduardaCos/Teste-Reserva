@@ -1,6 +1,6 @@
 {
-  "onibus_padrao": 2,
-  "onibus_viagem_sexta": 2,
+  "onibus_padrao": 1,
+  "onibus_viagem_sexta": 1,
   "onibus_temporario": null,
   "opcoes_onibus": {
     "1": "Ônibus 1 (0542 - Motorista padrão: Dheimes)",
