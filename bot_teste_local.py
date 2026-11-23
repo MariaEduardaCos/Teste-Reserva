@@ -8,6 +8,8 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timedelta
 
+from notificacoes_reserva import registrar_e_notificar
+
 try:
     import requests
 except ImportError:
@@ -383,7 +385,7 @@ def realizar_reserva(data_viagem, poltrona, onibus=None):
             print(f"✅ [{datetime.now().strftime('%H:%M:%S')}] RESERVA CONFIRMADA COM SUCESSO NO SUPABASE!")
             print(
                 f"📌 Dados: {descricao_onibus(onibus_escolhido)} | Poltrona {poltrona} | "
-                f"Código: {codigo or 'Confirmado'} | {DADOS_USUARIO['p_nome']}"
+                f"Código: {'capturado' if codigo else 'nao informado'} | {DADOS_USUARIO['p_nome']}"
             )
             return True, "CONFIRMADA", codigo or "Confirmado"
 
@@ -493,8 +495,9 @@ def executar_bot_nova_regra(
         print(
             f"✅ Você já possui uma reserva ativa para {data_alvo}: "
             f"Ônibus {reserva_ativa.get('onibus')} | Poltrona {reserva_ativa.get('poltrona')} | "
-            f"Código: {reserva_ativa.get('codigo_reserva')}"
+            f"Código: {'disponivel' if reserva_ativa.get('codigo_reserva') else 'nao retornado'}"
         )
+        registrar_e_notificar(data_alvo, reserva_ativa.get("onibus"), reserva_ativa.get("poltrona"), reserva_ativa.get("codigo_reserva"), DADOS_USUARIO["p_nome"], origem="existente")
         return True
 
     # 2. Loop de recarregamento a cada 2 segundos (aguarda a abertura e reserva na hora)
@@ -515,6 +518,7 @@ def executar_bot_nova_regra(
         sucesso, status_tipo, detalhe = realizar_reserva(data_alvo, poltrona_escolhida, onibus=onibus_selecionado)
 
         if sucesso:
+            registrar_e_notificar(data_alvo, onibus_selecionado, poltrona_escolhida, detalhe, DADOS_USUARIO["p_nome"])
             limpar_onibus_temporario_se_usado()
             return True
 
@@ -523,8 +527,9 @@ def executar_bot_nova_regra(
             if reserva_ativa:
                 print(
                     f"✅ Reserva já consta ativa no sistema: Poltrona {reserva_ativa.get('poltrona')} "
-                    f"(Código: {reserva_ativa.get('codigo_reserva')})"
+                    f"(Código: {'disponivel' if reserva_ativa.get('codigo_reserva') else 'nao retornado'})"
                 )
+                registrar_e_notificar(data_alvo, reserva_ativa.get("onibus"), reserva_ativa.get("poltrona"), reserva_ativa.get("codigo_reserva"), DADOS_USUARIO["p_nome"], origem="existente")
             return True
 
         if status_tipo == "POLTRONA_OCUPADA":
