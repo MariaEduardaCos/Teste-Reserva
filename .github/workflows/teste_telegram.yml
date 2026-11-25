@@ -60,7 +60,13 @@ jobs:
                   "Unauthorized": "Token do bot invalido ou revogado.",
               }
               print(f"ERRO: Telegram HTTP {erro.code}.")
-              print("Diagnostico: " + mensagens.get(descricao, "Confira se o token e o Chat ID pertencem ao mesmo bot/conversa."))
+              import re
+              # A descricao normalmente inclui somente o motivo; imprimir um texto
+              # sanitizado, sem numeros, links ou outras informacoes sensiveis.
+              motivo_seguro = re.sub(r"[^A-Za-zÀ-ÿ :.,'_-]", "", descricao)[:160]
+              if motivo_seguro.lower().startswith(("forbidden:", "bad request:", "unauthorized")):
+                  print("Resposta do Telegram: " + motivo_seguro)
+              print("Diagnostico: " + mensagens.get(descricao, "Verifique a resposta do Telegram acima e confira se o chat foi iniciado com o bot correto."))
               raise SystemExit(1)
           except urllib.error.URLError:
               raise SystemExit("ERRO: nao foi possivel conectar a API do Telegram.")
