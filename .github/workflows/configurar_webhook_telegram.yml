@@ -1,0 +1,54 @@
+name: Configurar Webhook Telegram (sem reservas)
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  configurar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+      TELEGRAM_WORKER_URL: ${{ vars.TELEGRAM_WORKER_URL }}
+    steps:
+      - name: Registrar webhook do Telegram no Worker
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+          import urllib.error
+
+          token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+          secret = os.environ.get("TELEGRAM_WEBHOOK_SECRET", "").strip()
+          url = os.environ.get("TELEGRAM_WORKER_URL", "").strip().rstrip("/")
+          if not token or not secret or not url.startswith("https://"):
+              raise SystemExit("Configure TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET e a variable TELEGRAM_WORKER_URL.")
+          if not all(ch.isalnum() or ch in "_-" for ch in secret) or len(secret) > 256:
+              raise SystemExit("TELEGRAM_WEBHOOK_SECRET deve ter apenas letras, numeros, _ ou - (ate 256 caracteres).")
+          dados = urllib.parse.urlencode({
+              "url": url,
+              "secret_token": secret,
+              "allowed_updates": json.dumps(["message", "callback_query"]),
+              "drop_pending_updates": "false",
+          }).encode("utf-8")
+          request = urllib.request.Request(
+              "https://api.telegram.org/bot" + token + "/setWebhook",
+              data=dados, method="POST"
+          )
+          try:
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  result = json.load(response)
+              if result.get("ok") and result.get("result") is True:
+                  print("Webhook do Telegram configurado com sucesso, sem realizar reservas.")
+              else:
+                  raise SystemExit("Telegram nao confirmou a configuracao do webhook.")
+          except urllib.error.HTTPError as err:
+              print(f"Erro HTTP {err.code} ao configurar webhook. Confira URL e segredo (sem compartilhar seus valores).")
+              raise SystemExit(1)
+          PY
