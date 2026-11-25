@@ -49,6 +49,12 @@ jobs:
         run: pip install requests
 
       - name: Executar Bot de Reserva
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           ARGS=""
           if [ -n "${{ github.event.inputs.onibus }}" ]; then
@@ -58,3 +64,32 @@ jobs:
             ARGS="$ARGS --forcar"
           fi
           python3 -u bot_teste_local.py $ARGS
+
+      # O repositorio e publico: nunca publicar comprovantes sem criptografia.
+      - name: Criptografar comprovante para o GitHub
+        if: ${{ always() }}
+        env:
+          COMPROVANTE_SENHA: ${{ secrets.COMPROVANTE_SENHA }}
+        shell: bash
+        run: |
+          if [ -f comprovantes/comprovante.json ]; then
+            if [ -z "$COMPROVANTE_SENHA" ]; then
+              echo "COMPROVANTE_SENHA ausente; comprovante nao sera publicado no GitHub."
+              rm -rf comprovantes
+              exit 0
+            fi
+            mkdir -p comprovante-protegido
+            printf '%s' "$COMPROVANTE_SENHA" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+              --symmetric --cipher-algo AES256 --output comprovante-protegido/comprovante.json.gpg comprovantes/comprovante.json
+            rm -rf comprovantes
+            echo "Comprovante criptografado gerado."
+          fi
+
+      - name: Guardar comprovante criptografado (30 dias)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: comprovante-reserva-${{ github.run_id }}
+          path: comprovante-protegido/comprovante.json.gpg
+          if-no-files-found: ignore
+          retention-days: 30
