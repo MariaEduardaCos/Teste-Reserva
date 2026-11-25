@@ -84,7 +84,16 @@ def _enviar_telegram(dados):
         print("Telegram nao configurado: faltam Secrets TELEGRAM_BOT_TOKEN ou TELEGRAM_CHAT_ID.")
         return False
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    formulario = urllib.parse.urlencode({"chat_id": chat_id, "text": _mensagem(dados)}).encode()
+    payload = {"chat_id": chat_id, "text": _mensagem(dados)}
+    codigo = str(dados.get("codigo_reserva") or "").strip().upper()
+    if PADRAO_CODIGO.fullmatch(codigo):
+        payload["reply_markup"] = json.dumps({
+            "inline_keyboard": [[{
+                "text": "❌ Solicitar cancelamento",
+                "callback_data": "cancel:" + codigo,
+            }]]
+        })
+    formulario = urllib.parse.urlencode(payload).encode()
     requisicao = urllib.request.Request(url, data=formulario, method="POST")
     with urllib.request.urlopen(requisicao, timeout=15) as resposta:
         resultado = json.load(resposta)
