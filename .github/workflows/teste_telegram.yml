@@ -43,8 +43,24 @@ jobs:
               if not corpo.get("ok"):
                   raise SystemExit("ERRO: o Telegram nao confirmou o envio. Confira o chat ID e se deu /start no bot.")
           except urllib.error.HTTPError as erro:
-              # Nunca imprimir URL ou corpo da resposta: contem dados sensiveis.
-              print(f"ERRO: Telegram retornou HTTP {erro.code}. Confira token, chat ID e /start.")
+              # Exibir somente codigos e descricoes conhecidas, nunca token ou URL.
+              try:
+                  corpo_erro = json.loads(erro.read().decode("utf-8"))
+                  descricao = str(corpo_erro.get("description", ""))
+              except (ValueError, UnicodeError):
+                  descricao = ""
+              mensagens = {
+                  "Forbidden: bot was blocked by the user": "O usuario bloqueou o bot: desbloqueie-o e envie /start.",
+                  "Forbidden: bot can't initiate conversation with a user": "A conta de destino ainda nao iniciou conversa com ESTE bot.",
+                  "Forbidden: bot can't send messages to bots": "O Chat ID pertence a outro bot e nao a uma conta pessoal.",
+                  "Forbidden: bot was kicked from the group chat": "O bot foi removido do grupo.",
+                  "Forbidden: bot is not a member of the supergroup chat": "O bot nao participa desse grupo.",
+                  "Forbidden: bot is not a member of the channel chat": "O bot nao participa desse canal.",
+                  "Bad Request: chat not found": "Chat ID incorreto, ou conversa nao acessivel pelo bot.",
+                  "Unauthorized": "Token do bot invalido ou revogado.",
+              }
+              print(f"ERRO: Telegram HTTP {erro.code}.")
+              print("Diagnostico: " + mensagens.get(descricao, "Confira se o token e o Chat ID pertencem ao mesmo bot/conversa."))
               raise SystemExit(1)
           except urllib.error.URLError:
               raise SystemExit("ERRO: nao foi possivel conectar a API do Telegram.")
