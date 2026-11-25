@@ -1,0 +1,52 @@
+name: Teste Isolado Telegram
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testar-telegram:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Enviar mensagem de teste sem realizar reserva
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+          import urllib.error
+
+          token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+          chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+          if not token or not chat_id:
+              raise SystemExit("ERRO: configure TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID nos Repository secrets.")
+
+          mensagem = (
+              "✅ TESTE DO TESTE-RESERVA\n"
+              "O Telegram foi conectado ao GitHub Actions com sucesso.\n"
+              "Esta é apenas uma mensagem de teste. Nenhuma reserva foi realizada."
+          )
+          url = "https://api.telegram.org/bot" + token + "/sendMessage"
+          dados = urllib.parse.urlencode({"chat_id": chat_id, "text": mensagem}).encode("utf-8")
+          req = urllib.request.Request(url, data=dados, method="POST")
+          try:
+              with urllib.request.urlopen(req, timeout=20) as resposta:
+                  corpo = json.load(resposta)
+              if not corpo.get("ok"):
+                  raise SystemExit("ERRO: o Telegram nao confirmou o envio. Confira o chat ID e se deu /start no bot.")
+          except urllib.error.HTTPError as erro:
+              # Nunca imprimir URL ou corpo da resposta: contem dados sensiveis.
+              print(f"ERRO: Telegram retornou HTTP {erro.code}. Confira token, chat ID e /start.")
+              raise SystemExit(1)
+          except urllib.error.URLError:
+              raise SystemExit("ERRO: nao foi possivel conectar a API do Telegram.")
+          print("SUCESSO: mensagem de teste enviada ao Telegram. Nenhuma reserva foi realizada.")
+          PY
