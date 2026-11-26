@@ -1,0 +1,24 @@
+name: Testes do cancelamento Telegram
+
+on:
+  pull_request:
+    paths:
+      - "telegram-worker/**"
+      - ".github/workflows/testar_cancelamento_telegram.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Testar cancelamento sem rede ou reservas reais
+        working-directory: telegram-worker
+        run: npm test
