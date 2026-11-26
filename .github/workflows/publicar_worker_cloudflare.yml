@@ -1,0 +1,55 @@
+name: Publicar Worker Telegram no Cloudflare
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Obter codigo do Worker sem alterar o robô principal
+        uses: actions/checkout@v4
+        with:
+          ref: feature/cancelamento-telegram-worker
+      - name: Verificar segredos obrigatorios
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          HOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+        run: |
+          for name in CF_TOKEN CF_ACCOUNT BOT_TOKEN CHAT_ID HOOK_SECRET; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret obrigatorio ausente: $name"
+              exit 1
+            fi
+          done
+          if [[ ! "$HOOK_SECRET" =~ ^[A-Za-z0-9_-]{16,256}$ ]]; then
+            echo "::error::TELEGRAM_WEBHOOK_SECRET deve ter entre 16 e 256 caracteres: letras, numeros, _ ou -"
+            exit 1
+          fi
+
+      - name: Publicar Worker e configurar Secrets
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: telegram-worker
+          command: deploy
+          secrets: |
+            TELEGRAM_BOT_TOKEN
+            TELEGRAM_CHAT_ID
+            TELEGRAM_WEBHOOK_SECRET
+            SUPABASE_URL
+            SUPABASE_PUBLISHABLE_KEY
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          SUPABASE_URL: https://ijavkuwlcascnwnucbgm.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_CJvBm4ZD5q2uz0E8hxf81w_ZiXdHels
