@@ -73,13 +73,58 @@ async function reply(env, chatId, text, markup) {
   });
 }
 
+async function consultarReserva(env, chatId, date) {
+  if (!env.RESERVA_NOME || !env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) {
+    await reply(env, chatId, "Consulta ainda não configurada.");
+    return;
+  }
+  try {
+    const response = await fetch(env.SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/rpc/consultar_reservas_por_nome_data_v2", {
+      method: "POST",
+      headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, "content-type": "application/json" },
+      body: JSON.stringify({ p_nome: env.RESERVA_NOME, p_data: date }),
+    });
+    if (!response.ok) throw new Error("Consulta falhou");
+    const rows = await response.json();
+    if (!Array.isArray(rows)) throw new Error("Resposta inesperada");
+    if (!rows.length) {
+      await reply(env, chatId, "Nenhuma reserva encontrada para " + date + ".");
+      return;
+    }
+    for (const d of rows) {
+      const code = normalize(d.codigo_reserva);
+      await reply(env, chatId, "🚌 Reserva encontrada\nData: " + date +
+        "\nÔnibus: " + (d.onibus ?? "não informado") +
+        "\nPoltrona: " + (d.poltrona ?? "não informada") +
+        "\nCódigo: " + (code || "não retornado"),
+        code ? keyboard([[{ text: "❌ Solicitar cancelamento", callback_data: "cancel:" + code }]]) : undefined);
+    }
+  } catch (_error) {
+    await reply(env, chatId, "Não consegui consultar a reserva. Nenhuma nova reserva foi solicitada.");
+  }
+}
+
 async function handleMessage(env, message) {
   if (!allowed(message.chat, message.from, env)) return;
   const chatId = message.chat.id;
   const text = String(message.text || "").trim();
   if (/^\/(start|ajuda|help)(?:@\w+)?$/i.test(text)) {
     await reply(env, chatId,
-      "🚌 Bot de reservas\n\nApós cada nova reserva, use o botão ❌ Solicitar cancelamento para iniciar o processo.\n\nTambém pode enviar /cancelar MU-XXXXXXXX, substituindo pelo seu código.\n\nO cancelamento só ocorre depois de uma segunda confirmação.");
+      "🚌 Bot de reservas\n\nUse /reserva para consultar amanhã ou /reserva AAAA-MM-DD para outra data.\n\nApós cada nova reserva, use o botão ❌ Solicitar cancelamento para iniciar o processo.\n\nTambém pode enviar /cancelar MU-XXXXXXXX, substituindo pelo seu código.\n\nO cancelamento só ocorre depois de uma segunda confirmação.");
+    return;
+  }
+  const consulta = text.match(/^\/reserva(?:@\w+)?(?:\s+(\d{4}-\d{2}-\d{2}))?$/i);
+  if (consulta) {
+    const hoje = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+    const partes = Object.fromEntries(hoje.map(p => [p.type, p.value]));
+    const amanha = new Date(Date.UTC(Number(partes.year), Number(partes.month) - 1, Number(partes.day) + 1)).toISOString().slice(0, 10);
+    const date = consulta[1] || amanha;
+    const parsed = new Date(date + "T00:00:00Z");
+    if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) {
+      await reply(env, chatId, "Data inválida. Use /reserva AAAA-MM-DD.");
+      return;
+    }
+    await consultarReserva(env, chatId, date);
     return;
   }
   const match = text.match(/^\/cancelar(?:@\w+)?\s+(\S+)$/i);

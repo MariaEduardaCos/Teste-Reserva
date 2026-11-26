@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import worker from "../src/index.js";
 
 const env = {
+  RESERVA_NOME: "Aluno Teste",
   TELEGRAM_CHAT_ID: "123456",
   TELEGRAM_BOT_TOKEN: "test-token",
   TELEGRAM_WEBHOOK_SECRET: "test-secret",
@@ -15,6 +16,9 @@ async function simulate(update) {
   const previous = globalThis.fetch;
   globalThis.fetch = async (url, opts) => {
     calls.push({ url: String(url), payload: JSON.parse(opts.body) });
+    if (String(url).endsWith("/consultar_reservas_por_nome_data_v2")) {
+      return new Response(JSON.stringify([{ onibus: 2, poltrona: 11, codigo_reserva: "MU-ABC12345" }]));
+    }
     if (String(url).includes("/rest/v1/rpc/")) {
       return new Response(JSON.stringify({ sucesso: true, data_viagem: "2026-11-27", onibus: 2, poltrona: 11 }),
         { status: 200, headers: { "content-type": "application/json" } });
@@ -88,4 +92,17 @@ test("missing webhook secret is rejected", async () => {
   const req = new Request("https://worker.example/", { method: "POST", body: "{}" });
   const response = await worker.fetch(req, env);
   assert.equal(response.status, 403);
+});
+
+test("consulta uses only read RPC and returns cancellation button", async () => {
+  const { calls } = await simulate(message("/reserva 2026-11-27"));
+  const rpc = calls.filter(x => x.url.includes("/rest/v1/rpc/"));
+  assert.equal(rpc.length, 1);
+  assert.ok(rpc[0].url.endsWith("/consultar_reservas_por_nome_data_v2"));
+  assert.equal(rpc[0].payload.p_data, "2026-11-27");
+  assert.ok(calls.some(x => x.payload.reply_markup?.inline_keyboard?.[0]?.[0]?.callback_data === "cancel:MU-ABC12345"));
+});
+test("unauthorized consultation makes no calls", async () => {
+  const { calls } = await simulate(message("/reserva", 999));
+  assert.equal(calls.length, 0);
 });
