@@ -48,6 +48,13 @@ jobs:
       - name: Instalar dependências
         run: pip install requests
 
+      - name: Restaurar historico de notificacoes
+        uses: actions/cache/restore@v4
+        with:
+          path: .notificacoes-reserva
+          key: reserva-notificacoes-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: reserva-notificacoes-v1-
+
       - name: Executar Bot de Reserva
         env:
           SMTP_USER: ${{ secrets.SMTP_USER }}
@@ -64,6 +71,13 @@ jobs:
             ARGS="$ARGS --forcar"
           fi
           python3 -u bot_teste_local.py $ARGS
+
+      - name: Salvar historico de notificacoes
+        if: ${{ always() }}
+        uses: actions/cache/save@v4
+        with:
+          path: .notificacoes-reserva
+          key: reserva-notificacoes-v1-${{ github.run_id }}-${{ github.run_attempt }}
 
       # O repositorio e publico: nunca publicar comprovantes sem criptografia.
       - name: Criptografar comprovante para o GitHub

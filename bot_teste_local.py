@@ -8,7 +8,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timedelta
 
-from notificacoes_reserva import registrar_e_notificar
+from notificacoes_reserva import registrar_e_notificar, notificar_falha
 
 try:
     import requests
@@ -511,6 +511,7 @@ def executar_bot_nova_regra(
 
         if not poltrona_escolhida:
             print("⚠️ Nenhuma poltrona disponível dentro da regra de prioridade!")
+            notificar_falha("Nenhuma poltrona disponivel.")
             return False
 
         print(f"🎯 [Tentativa #{tentativa}] Poltrona selecionada pela regra: Poltrona {poltrona_escolhida} [{tipo}]")
@@ -530,7 +531,9 @@ def executar_bot_nova_regra(
                     f"(Código: {'disponivel' if reserva_ativa.get('codigo_reserva') else 'nao retornado'})"
                 )
                 registrar_e_notificar(data_alvo, reserva_ativa.get("onibus"), reserva_ativa.get("poltrona"), reserva_ativa.get("codigo_reserva"), DADOS_USUARIO["p_nome"], origem="existente")
-            return True
+                return True
+            notificar_falha("Servidor informou reserva existente, mas os dados nao puderam ser confirmados.")
+            return False
 
         if status_tipo == "POLTRONA_OCUPADA":
             if poltrona_escolhida not in ocupadas:
@@ -542,6 +545,7 @@ def executar_bot_nova_regra(
             tempo_decorrido = time.time() - inicio_loop
             if not aguardar_abertura or tempo_decorrido >= duracao_max_tentativas_seg:
                 print("⏹️ Limite de espera atingido com a janela ainda fechada.")
+                notificar_falha("Janela de reservas fechada ao fim da espera.")
                 return False
             print(f"⏳ [{datetime.now().strftime('%H:%M:%S')}] Aguardando {int(INTERVALO_RECARREGAMENTO_SEG)}s para recarregar e tentar novamente...")
             time.sleep(INTERVALO_RECARREGAMENTO_SEG)
@@ -549,10 +553,12 @@ def executar_bot_nova_regra(
 
         if status_tipo == "COTA_ESGOTADA":
             print(f"❌ Cota da UniRV esgotada para o {descricao_onibus(onibus_selecionado)}.")
+            notificar_falha("Cota da UniRV esgotada.")
             return False
 
         # Outros erros de rede/comunicação: recarrega em 2 segundos se estiver dentro da janela
         if not aguardar_abertura or (time.time() - inicio_loop) >= duracao_max_tentativas_seg:
+            notificar_falha("Limite de tentativas ou falha de comunicacao.")
             return False
         time.sleep(INTERVALO_RECARREGAMENTO_SEG)
 
